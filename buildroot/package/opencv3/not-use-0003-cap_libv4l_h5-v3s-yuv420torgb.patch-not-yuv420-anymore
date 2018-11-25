@@ -1,0 +1,163 @@
+--- a/modules/videoio/src/cap_libv4l.cpp	2018-05-14 18:08:03.108764817 +0800
++++ b/modules/videoio/src/cap_libv4l.cpp	2018-05-14 22:46:28.504005880 +0800
+@@ -699,7 +699,7 @@
+    If you are not in North America or have a different video standard, you WILL have to change
+    the following settings and recompile/reinstall.  This set of settings is based on
+    the most commonly encountered input video source types (like my bttv card) */
+-
++#if 0
+    if(capture->inp.index > 0) {
+        CLEAR (capture->inp);
+        capture->inp.index = CHANNEL_NUMBER;
+@@ -712,7 +712,28 @@
+          return -1;
+        }
+    } /* End if */
+-
++#else
++   {
++	   /* yuanjun */
++	   int count = 0;
++	   CLEAR (capture->inp);
++	   capture->inp.index = 0;
++	   
++	   while(!xioctl(capture->deviceHandle, VIDIOC_ENUMINPUT, &capture->inp)) {
++		   capture->inp.index = ++count;
++	   }
++	   count -= 1;
++
++	   assert(count > -1);
++
++	   if(-1 == xioctl(capture->deviceHandle, VIDIOC_S_INPUT, &count)) {
++		   fprintf (stderr, "VIDEOIO ERROR: V4L2: Aren't able to set channel number\n");
++		   icvCloseCAM_V4L (capture);
++		   return -1;
++	   }
++   }
++#endif
++   
+    /* Find Window info */
+    CLEAR (capture->form);
+    capture->form.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+@@ -738,6 +759,9 @@
+     break;
+   default:
+     requestedPixelFormat = V4L2_PIX_FMT_BGR24;
++    /* yuanjun : add this */
++    // printf("###OpenCV : V4L2_PIX_FMT_YUV420\n");
++    requestedPixelFormat = V4L2_PIX_FMT_YUV420;    
+     break;
+   }
+   CLEAR (capture->form);
+@@ -1287,6 +1311,72 @@
+    return(1);
+ }
+ 
++#define USE_FIXED_POINT 1
++/* yuanjun */
++/* YUV420, I420, YU12 */
++/*
++ * int rgb : 1 for RGB24, 0 for BGR24
++ */
++static int yu12_rgb(const unsigned char *src, unsigned char *dst, int width, int height, int rgb)
++{
++	int x, y;
++
++	const unsigned char *yp, *up, *vp;
++	#if USE_FIXED_POINT
++	uint8_t Y, U, V;
++	int c, d, e;
++	#else
++	int Y, U, V;
++	#endif
++	int r, g, b;
++
++	yp = src;
++	vp = src + width * height;
++	up = vp + (width * height) / 4;
++
++        for (y = 0; y < height; y++) {
++		for (x = 0; x < width; x++) {
++			Y = *(yp + y * width + x);
++			U = *(up + ((y/2) *(width/2)) + x/2);
++			V = *(vp + ((y/2) *(width/2)) + x/2);
++
++			#if USE_FIXED_POINT
++			c = Y - 16;
++			d = U - 128;
++			e = V - 128;
++
++			r = (298 * c           + 409 * e + 128) >> 8;
++			g = (298 * c - 100 * d - 208 * e + 128) >> 8;
++			b = (298 * c + 516 * d           + 128) >> 8;
++			#else
++			r = Y + 1.402 * (V - 128);
++			g = Y - 0.34414 * (U - 128) - 0.71414 * (V - 128);
++			b = Y + 1.772 * (U - 128);
++			#endif
++                        if (r > 255) r = 255;
++			if (g > 255) g = 255;
++			if (b > 255) b = 255;
++			if (r < 0)   r = 0;
++			if (g < 0)   g = 0;
++			if (b < 0)   b = 0;
++
++			if (rgb) {
++				/* RGB 24 */
++				*(dst + (y * width + x) * 3 + 0) = b;
++				*(dst + (y * width + x) * 3 + 1) = g;
++				*(dst + (y * width + x) * 3 + 2) = r;
++			} else {
++				/* BGR 24 */
++				*(dst + (y * width + x) * 3 + 0) = r;
++				*(dst + (y * width + x) * 3 + 1) = g;
++				*(dst + (y * width + x) * 3 + 2) = b;
++			}
++		}
++	}
++
++	return 0;
++}
++
+ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
+ 
+   if (capture->is_v4l2_device == 0)
+@@ -1337,6 +1427,38 @@
+   {
+ 
+     if(capture->buffers[capture->bufferIndex].start){
++	    /* yuanjun */
++	    //printf("###OpenCV : copy data here %d\n", capture->frame.imageSize);
++	    if (0)
++	    {
++		    static int idx = 0;
++		    char file[128];
++		    FILE* fp;
++
++		    snprintf(file, sizeof(file), "/jpgs/%d.yu12", idx++);
++		    fp = fopen(file, "wb");
++		    if (fp) {
++			    int r = fwrite((char *)capture->buffers[capture->bufferIndex].start,
++					   1,
++					   307200,
++					   fp);
++			    fclose(fp);
++			    printf("(%dx%d) write to %s, %d bytes\n",
++				   capture->form.fmt.pix.width,
++				   capture->form.fmt.pix.height,
++				   file, r);
++		    }
++	    }
++	    
++	    if (1)
++	    yu12_rgb((unsigned char *)capture->buffers[capture->bufferIndex].start,
++		     (unsigned char *)capture->frame.imageData,
++		     capture->form.fmt.pix.width,
++		     capture->form.fmt.pix.height,
++		     0
++		    );
++
++	    if (0)
+       memcpy((char *)capture->frame.imageData,
+          (char *)capture->buffers[capture->bufferIndex].start,
+          capture->frame.imageSize);

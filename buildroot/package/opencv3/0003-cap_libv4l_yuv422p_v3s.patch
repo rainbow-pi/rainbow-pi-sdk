@@ -1,0 +1,316 @@
+--- opencv3-3.3.0/modules/videoio/src/cap_libv4l.cpp	2018-10-06 09:57:35.215254233 +0800
++++ opencv3-3.3.0-422p/modules/videoio/src/cap_libv4l.cpp	2018-10-06 09:08:54.136296132 +0800
+@@ -699,7 +699,7 @@
+    If you are not in North America or have a different video standard, you WILL have to change
+    the following settings and recompile/reinstall.  This set of settings is based on
+    the most commonly encountered input video source types (like my bttv card) */
+-
++#if 0
+    if(capture->inp.index > 0) {
+        CLEAR (capture->inp);
+        capture->inp.index = CHANNEL_NUMBER;
+@@ -712,7 +712,28 @@
+          return -1;
+        }
+    } /* End if */
+-
++#else
++   {
++	   /* yuanjun */
++	   int count = 0;
++	   CLEAR (capture->inp);
++	   capture->inp.index = 0;
++	   
++	   while(!xioctl(capture->deviceHandle, VIDIOC_ENUMINPUT, &capture->inp)) {
++		   capture->inp.index = ++count;
++	   }
++	   count -= 1;
++
++	   assert(count > -1);
++
++	   if(-1 == xioctl(capture->deviceHandle, VIDIOC_S_INPUT, &count)) {
++		   fprintf (stderr, "VIDEOIO ERROR: V4L2: Aren't able to set channel number\n");
++		   icvCloseCAM_V4L (capture);
++		   return -1;
++	   }
++   }
++#endif
++   
+    /* Find Window info */
+    CLEAR (capture->form);
+    capture->form.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+@@ -728,16 +749,30 @@
+   unsigned int requestedPixelFormat;
+   switch (capture->mode) {
+   case CV_CAP_MODE_RGB:
+-    requestedPixelFormat = V4L2_PIX_FMT_RGB24;
++    //requestedPixelFormat = V4L2_PIX_FMT_RGB24;
++    requestedPixelFormat = V4L2_PIX_FMT_YUV422P;
+     break;
+   case CV_CAP_MODE_GRAY:
+-    requestedPixelFormat = V4L2_PIX_FMT_YUV420;
++    /* yuanjun : YUV420, a.k.a 'YU12', is OK for V3S, but we perfer YUV422P */    	  
++    //requestedPixelFormat = V4L2_PIX_FMT_YUV420;
++    requestedPixelFormat = V4L2_PIX_FMT_YUV422P;	  
+     break;
+   case CV_CAP_MODE_YUYV:
++    /* yuanjun : todo -> use 422P and convert to YUYV */
+     requestedPixelFormat = V4L2_PIX_FMT_YUYV;
+     break;
+   default:
++	  /* yuanjun : opencv app requires default fmt BGR24,
++	     but v3s supports 422p or yu12 only, so we read YUV
++	     from sensor, and convert it to BGR24 */
++    #if 0
+     requestedPixelFormat = V4L2_PIX_FMT_BGR24;
++    #endif
++    /* yuanjun : add this */
++    // requestedPixelFormat = V4L2_PIX_FMT_YUV420;
++    /* yuanjun : YUV420, a.k.a 'YU12', is OK for V3S, but we perfer YUV422P */    
++    requestedPixelFormat = V4L2_PIX_FMT_YUV422P;
++
+     break;
+   }
+   CLEAR (capture->form);
+@@ -1287,6 +1322,172 @@
+    return(1);
+ }
+ 
++#define USE_FIXED_POINT 1
++/* YUV422P, I422 */
++/*
++ * int rgb : 1 for RGB24, 0 for BGR24
++ */
++static int yuv422p_rgb_internal(const unsigned char *src, unsigned char *dst,
++				int width, int height, int rgb, int bpp, uint8_t alpha)
++{
++	int x, y;
++	int y_ratio = 1;
++	const unsigned char *yp, *up, *vp;
++	#if USE_FIXED_POINT
++	uint8_t Y, U, V;
++	int c, d, e;
++	#else
++	int Y, U, V;
++	#endif
++	int r, g, b;
++
++	yp = src;
++	up = src + width * height;
++	vp = up + (width * height) / 2;
++
++        for (y = 0; y < height; y++) {
++		for (x = 0; x < width; x++) {
++			Y = *(yp + y * width + x);
++			U = *(up + ((y/y_ratio) *(width/2)) + x/2);
++			V = *(vp + ((y/y_ratio) *(width/2)) + x/2);
++
++			#if USE_FIXED_POINT
++			c = Y - 16;
++			d = U - 128;
++			e = V - 128;
++
++			r = (298 * c           + 409 * e + 128) >> 8;
++			g = (298 * c - 100 * d - 208 * e + 128) >> 8;
++			b = (298 * c + 516 * d           + 128) >> 8;
++			#else
++			r = Y + 1.402 * (V - 128);
++			g = Y - 0.34414 * (U - 128) - 0.71414 * (V - 128);
++			b = Y + 1.772 * (U - 128);
++			#endif
++
++                        if (r > 255) r = 255;
++			if (g > 255) g = 255;
++			if (b > 255) b = 255;
++			if (r < 0)   r = 0;
++			if (g < 0)   g = 0;
++			if (b < 0)   b = 0;
++
++
++			if (bpp == 24) {
++				if (rgb) {
++					/* RGB 24 */
++					*(dst + (y * width + x) * 3 + 0) = r;
++					*(dst + (y * width + x) * 3 + 1) = g;
++					*(dst + (y * width + x) * 3 + 2) = b;
++				} else {
++					/* BGR 24 */
++					*(dst + (y * width + x) * 3 + 0) = b;
++					*(dst + (y * width + x) * 3 + 1) = g;
++					*(dst + (y * width + x) * 3 + 2) = r;
++				}
++			} else if (bpp == 32) {
++                                if (rgb) {
++					/* RGB 32 */
++					*(dst + (y * width + x) * 4 + 0) = r;
++					*(dst + (y * width + x) * 4 + 1) = g;
++					*(dst + (y * width + x) * 4 + 2) = b;
++					*(dst + (y * width + x) * 4 + 3) = alpha;
++				} else {
++					/* BGR 32 */
++					*(dst + (y * width + x) * 4 + 0) = b;
++					*(dst + (y * width + x) * 4 + 1) = g;
++					*(dst + (y * width + x) * 4 + 2) = r;
++					*(dst + (y * width + x) * 4 + 3) = alpha;
++				}
++			} else if (bpp == 16) {
++                                uint16_t tmp;
++				tmp = ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3);
++				*(dst + (y * width + x) * 2 + 0) = tmp & 0xff;
++				*(dst + (y * width + x) * 2 + 1) = tmp >> 8;
++			}
++		}
++	}
++
++	return 0;
++}
++
++static int yuv422p_to_rgb24(const unsigned char *src, unsigned char *dst,
++			    int width, int height)
++{
++	return yuv422p_rgb_internal(src, dst, width, height, 0, 24, 1);
++}
++
++static int yuv422p_to_bgr24(const unsigned char *src, unsigned char *dst,
++			    int width, int height)
++{
++	return yuv422p_rgb_internal(src, dst, width, height, 0, 24, 0);
++}
++
++/* yuanjun */
++/* YUV420, I420, YU12 */
++/*
++ * int rgb : 1 for RGB24, 0 for BGR24
++ */
++static int yu12_rgb(const unsigned char *src, unsigned char *dst, int width, int height, int rgb)
++{
++	int x, y;
++
++	const unsigned char *yp, *up, *vp;
++	#if USE_FIXED_POINT
++	uint8_t Y, U, V;
++	int c, d, e;
++	#else
++	int Y, U, V;
++	#endif
++	int r, g, b;
++
++	yp = src;
++	vp = src + width * height;
++	up = vp + (width * height) / 4;
++
++        for (y = 0; y < height; y++) {
++		for (x = 0; x < width; x++) {
++			Y = *(yp + y * width + x);
++			U = *(up + ((y/2) *(width/2)) + x/2);
++			V = *(vp + ((y/2) *(width/2)) + x/2);
++
++			#if USE_FIXED_POINT
++			c = Y - 16;
++			d = U - 128;
++			e = V - 128;
++
++			r = (298 * c           + 409 * e + 128) >> 8;
++			g = (298 * c - 100 * d - 208 * e + 128) >> 8;
++			b = (298 * c + 516 * d           + 128) >> 8;
++			#else
++			r = Y + 1.402 * (V - 128);
++			g = Y - 0.34414 * (U - 128) - 0.71414 * (V - 128);
++			b = Y + 1.772 * (U - 128);
++			#endif
++                        if (r > 255) r = 255;
++			if (g > 255) g = 255;
++			if (b > 255) b = 255;
++			if (r < 0)   r = 0;
++			if (g < 0)   g = 0;
++			if (b < 0)   b = 0;
++
++			if (rgb) {
++				/* RGB 24 */
++				*(dst + (y * width + x) * 3 + 0) = b;
++				*(dst + (y * width + x) * 3 + 1) = g;
++				*(dst + (y * width + x) * 3 + 2) = r;
++			} else {
++				/* BGR 24 */
++				*(dst + (y * width + x) * 3 + 0) = r;
++				*(dst + (y * width + x) * 3 + 1) = g;
++				*(dst + (y * width + x) * 3 + 2) = b;
++			}
++		}
++	}
++
++	return 0;
++}
++
+ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
+ 
+   if (capture->is_v4l2_device == 0)
+@@ -1337,9 +1538,68 @@
+   {
+ 
+     if(capture->buffers[capture->bufferIndex].start){
++	    /* yuanjun */
++	    //printf("###OpenCV : copy data here %d\n", capture->frame.imageSize);
++	    if (0)
++	    {
++		    static int idx = 0;
++		    char file[128];
++		    FILE* fp;
++
++		    snprintf(file, sizeof(file), "/jpgs/%d.yu12", idx++);
++		    fp = fopen(file, "wb");
++		    if (fp) {
++			    int r = fwrite((char *)capture->buffers[capture->bufferIndex].start,
++					   1,
++					   307200,
++					   fp);
++			    fclose(fp);
++			    printf("(%dx%d) write to %s, %d bytes\n",
++				   capture->form.fmt.pix.width,
++				   capture->form.fmt.pix.height,
++				   file, r);
++		    }
++	    }
++
++	    switch (capture->mode) {
++	    case CV_CAP_MODE_RGB:
++		    yuv422p_to_rgb24((unsigned char *)capture->buffers[capture->bufferIndex].start,
++				     (unsigned char *)capture->frame.imageData,
++				     capture->form.fmt.pix.width,
++				     capture->form.fmt.pix.height);
++		    break;
++	    case CV_CAP_MODE_BGR:
++		    yuv422p_to_bgr24((unsigned char *)capture->buffers[capture->bufferIndex].start,
++				     (unsigned char *)capture->frame.imageData,
++				     capture->form.fmt.pix.width,
++				     capture->form.fmt.pix.height);
++		    break;
++	    case CV_CAP_MODE_GRAY:
++		    memcpy((char *)capture->frame.imageData,
++			   (char *)capture->buffers[capture->bufferIndex].start,
++			   capture->frame.imageSize);
++		    break;
++	    case CV_CAP_MODE_YUYV:
++		    /* yuanjun : should we support YUYV ? */
++		    break;
++	    }
++
++	    #if 0
++	    /* yuanjun : v3s is OK with 422P, so no YU12 any more */
++	    yu12_rgb((unsigned char *)capture->buffers[capture->bufferIndex].start,
++		     (unsigned char *)capture->frame.imageData,
++		     capture->form.fmt.pix.width,
++		     capture->form.fmt.pix.height,
++		     0
++		    );
++	    #endif
++	    #if 0
++	    /* yuanjun : the original one */
++	    if (0)
+       memcpy((char *)capture->frame.imageData,
+          (char *)capture->buffers[capture->bufferIndex].start,
+          capture->frame.imageSize);
++	    #endif
+     }
+ 
+   } else

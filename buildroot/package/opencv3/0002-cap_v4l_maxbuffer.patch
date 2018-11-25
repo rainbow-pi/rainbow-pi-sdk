@@ -1,0 +1,11 @@
+--- opencv3-3.2.0-orig/modules/videoio/src/cap_v4l.cpp	2017-02-24 15:18:29.159055848 +0800
++++ opencv3-3.2.0/modules/videoio/src/cap_v4l.cpp	2017-02-24 15:22:36.007045374 +0800
+@@ -245,7 +245,7 @@
+ 
+ 
+ // default and maximum number of V4L buffers, not including last, 'special' buffer
+-#define MAX_V4L_BUFFERS 10
++#define MAX_V4L_BUFFERS 4
+ #define DEFAULT_V4L_BUFFERS 4
+ 
+ // if enabled, then bad JPEG warnings become errors and cause NULL returned instead of image
