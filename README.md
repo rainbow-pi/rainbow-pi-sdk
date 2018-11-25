@@ -1,3 +1,4 @@
+![核心板](https://github.com/rainbow-pi/rainbow-pi-sdk/raw/master/rainbow-pi-core.jpg)
 
 【全志V3S开发板 - 彩虹派简介】
 
@@ -5,8 +6,7 @@
 
 	我们提供软硬件设计资料和技术支持，帮助用户快速使用、上手、做项目
 
-	![核心板](https://github.com/rainbow-pi/rainbow-pi-sdk/blob/master/rainbow-pi-core.jpg)
-	
+
 【软件】
 
 	u-boot
