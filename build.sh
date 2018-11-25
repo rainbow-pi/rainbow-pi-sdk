@@ -1,7 +1,21 @@
 #!/bin/sh
 
+#
+# This file is part of the Rainbow Pi project.
+# Copyright (c) 2018 YuanJun <yuanjun2006@outlook.com>
+# This work is licensed under the MIT license, see the file LICENSE for details.
+#
+
+#
+# https://mvdevice.taobao.com   is our E-Shop
+#
+
 USERNAME=`echo $USER`
 GROUPNAME=`id -gn ${USERNAME}`
+
+mkdir -p output/
+mkdir -p output/image/
+mkdir -p output/rootfs/
 
 export BOARD=tiger-spinand-standard
 
@@ -76,6 +90,10 @@ function build_buildroot()
 
 function build_uboot_spinandflash_or_emmc()
 {
+    if [ ! -d ${UBOOT_DIR} ]; then
+	git clone https://github.com/rainbow-pi/u-boot-2011.09.git
+	[ $? -ne 0 ] && echo "download u-boot failed" && return 1
+    fi
     (cd ${UBOOT_DIR} && ./build.sh -p sun8iw8p1_spinand_emmc)
     [ $? -ne 0 ] && echo "build u-boot Failed" && return 1
     return 0
@@ -83,6 +101,10 @@ function build_uboot_spinandflash_or_emmc()
 
 function build_uboot_norflash()
 {
+    if [ ! -d ${UBOOT_DIR} ]; then
+	git clone https://github.com/rainbow-pi/u-boot-2011.09.git
+	[ $? -ne 0 ] && echo "download u-boot failed" && return 1
+    fi
     (cd ${UBOOT_DIR} && ./build.sh -p sun8iw8p1_nor)
     [ $? -ne 0 ] && echo "build u-boot Failed" && return 1
     (cd ${UBOOT_DIR} && ./build.sh -p sun8iw8p1)
@@ -108,6 +130,11 @@ function build_kernel()
 {
     echo "build_kernel ..."
 
+    if [ ! -d ${KERNEL_DIR} ]; then
+	git clone https://github.com/rainbow-pi/linux-3.4.git
+	[ $? -ne 0 ] && echo "download kernel failed" && return 1
+    fi
+    
     (cd ${KERNEL_DIR}; ./build.sh kernel)
     [ $? -ne 0 ] && echo "build kernel failed" && return 1
 	
@@ -236,7 +263,7 @@ elif [ $# -gt 0 ]; then
     if [ $1 == 'kernel-config' ]; then
 	if [ ! -f ${KERNEL_DIR}.config ]; then
 	    echo "Copy linux config file."
-	    cp ${SDK_CONFIG_DIR}linux.config ${KERNEL_DIR}.config
+	    cp ${KERNEL_DIR}arch/arm/configs/rainbowpi_defconfig
 	fi
 	
 	(cd ${KERNEL_DIR} && make ARCH=arm menuconfig)
