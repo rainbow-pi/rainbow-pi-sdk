@@ -49,10 +49,12 @@
 	${RAINBOWPI_SDK_DIR}tools/pack/rainbow-pi.img
 
 【安装烧写软件】
+
 	Windows版
 	${RAINBOWPI_SDK_DIR}tools/windows/PhoenixSuite_CN_V1.0.8.msi
 
 【烧写镜像文件】
+
 	将 ${RAINBOWPI_SDK_DIR}tools/pack/rainbow-pi.img 拷贝到windows下烧写
 
 	
