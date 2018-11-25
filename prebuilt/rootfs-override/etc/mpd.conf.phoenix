@@ -1,0 +1,48 @@
+connection_timeout		"5"
+
+playlist_directory		"/var/lib/mpd/playlists"
+db_file					"/var/lib/mpd/database"
+state_file              "/var/lib/mpd/state"
+pid_file                "/var/run/mpd.pid"
+log_file                "/var/log/mpd.log"
+music_directory			"/media/"
+
+#password				"123456"
+gapless_mp3_playback	"no"
+follow_outside_symlinks	"yes"
+follow_inside_symlinks	"yes"
+auto_update				"yes"
+volume_normalization	"no"
+audio_buffer_size		"8192"
+buffer_before_play		"10%"
+max_connections			"20"
+max_playlist_length		"32384"
+max_command_list_size	"8192"
+max_output_buffer_size	"16384"
+
+#zeroconf_enabled		"yes"
+#zeroconf_name			"x-server"
+
+bind_to_address         "any"
+# bind_to_address         "/var/run/mpd/socket"
+port                    "6600"
+
+audio_output {
+	type				"alsa"
+	name				"X-SPDIF 2"
+#	device				"hw:wm8960audio,0"
+	device				"hw:phoenix"
+#	mixer_device		"hw:1"
+#	mixer_control		"Matrix Audio Internal Clock Validity"
+#	mixer_type			"hardware"
+	auto_resample		"no"
+	auto_channels		"no"
+	auto_format			"no"
+	use_mmap			"yes"
+	dop					"no"
+	dsd_usb				"yes"
+	dsd_native			"yes"
+	dsd_native_type		"2"
+	enabled				"yes"
+}
+

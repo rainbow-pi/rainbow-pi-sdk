@@ -1,0 +1,35 @@
+#!/bin/sh
+
+start() {
+    modprobe videobuf-core
+    modprobe videobuf-dma-contig
+    modprobe cci
+    modprobe vfe_os
+    modprobe vfe_subdev
+    modprobe ov2710_mipi
+    modprobe vfe_v4l2
+}
+stop() {
+	echo "OK"
+}
+restart() {
+	stop
+}
+
+case "$1" in
+  start)
+	start
+	;;
+  stop)
+	stop
+	;;
+  restart|reload)
+	restart
+	;;
+  *)
+	echo "Usage: $0 {start|stop|restart}"
+	exit 1
+esac
+
+exit $?
+
