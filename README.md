@@ -51,8 +51,13 @@
 【安装烧写软件】
 
 	Windows版
+	
+	文件位置
 	${RAINBOWPI_SDK_DIR}tools/windows/PhoenixSuite_CN_V1.0.8.msi
 
+	安装方式
+	将上述安装文件拷贝到Windows安装
+	
 【烧写镜像文件】
 
 	将 ${RAINBOWPI_SDK_DIR}tools/pack/rainbow-pi.img 拷贝到windows下烧写
