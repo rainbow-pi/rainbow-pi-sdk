@@ -23,3 +23,39 @@
 	QQ群: 517453247
 
 	淘宝: https://mvdevice.taobao.com
+	
+【编译SDK】
+
+	1. 获取SDK源代码
+	git clone https://github.com/rainbow-pi/rainbow-pi-sdk.git
+	cd rainbow-pi-sdk
+	
+	2. 设置环境变量
+	export RAINBOWPI_SDK_DIR=`pwd`/
+	
+	3. 编译buildroot
+	cd ${RAINBOWPI_SDK_DIR}/buildroot
+	./build-qt.sh 或者 ./build-baseline.sh
+	
+	编译过程比较长
+	
+	4. 编译u-boot, linux, 打包镜像文件
+	cd ${RAINBOWPI_SDK_DIR}
+	./build.sh all
+	
+	这个过程会自动下载 u-boot, linux并编译
+	
+	5. 最终镜像文件
+	${RAINBOWPI_SDK_DIR}tools/pack/rainbow-pi.img
+
+【安装烧写软件】
+	Windows版
+	${RAINBOWPI_SDK_DIR}tools/windows/PhoenixSuite_CN_V1.0.8.msi
+
+【烧写镜像文件】
+	将 ${RAINBOWPI_SDK_DIR}tools/pack/rainbow-pi.img 拷贝到windows下烧写
+
+	
+	
+	
+	
