@@ -1,11 +1,12 @@
-![核心板](https://github.com/rainbow-pi/rainbow-pi-sdk/raw/master/rainbow-pi-core.jpg)
+![V3S 核心板](https://github.com/rainbow-pi/rainbow-pi-sdk/raw/master/Docs/rainbow-pi-core.jpg)
+
+![V3S 正面图](https://github.com/rainbow-pi/rainbow-pi-sdk/raw/master/Docs/rainbow-pi-frontview.png)
 
 【全志V3S开发板 - 彩虹派简介】
 
 	全志V3S开发板 - 彩虹派(Rainbow Pi)是一款模块化的系统，基于Allwinner V3S高性能ARM Cortex-A7 CPU，运行Linux系统，适合机器视觉 图像识别 物联网等
 
 	我们提供软硬件设计资料和技术支持，帮助用户快速使用、上手、做项目
-
 
 【软件】
 
@@ -23,7 +24,7 @@
 	QQ群: 517453247
 
 	淘宝: https://mvdevice.taobao.com
-	
+
 【编译SDK】
 
 	1. 获取SDK源代码
@@ -57,12 +58,9 @@
 
 	安装方式
 	将上述安装文件拷贝到Windows安装
-	
+
 【烧写镜像文件】
 
 	将 ${RAINBOWPI_SDK_DIR}tools/pack/rainbow-pi.img 拷贝到windows下烧写
-
-	
-	
 	
 	
