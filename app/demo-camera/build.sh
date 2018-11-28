@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 source ${RAINBOWPI_SDK_DIR}env-qt
 NFSROOT=/home/dev/fs/nfs/rainbow-pi/
