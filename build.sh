@@ -17,12 +17,28 @@ mkdir -p output/
 mkdir -p output/image/
 mkdir -p output/rootfs/
 
+if [ "x${RAINBOWPI_SDK_DIR}" = "x" ]; then
+    echo "# "
+    echo "# You should set RAINBOWPI_SDK_DIR environment variable correctly!"
+    echo "# "
+    echo "# See : https://github.com/rainbow-pi/rainbow-pi-sdk for details!"
+    echo "# "    
+    exit 1
+fi
+
+if [ ! -d ${RAINBOWPI_SDK_DIR}/buildroot -o ! -d ${RAINBOWPI_SDK_DIR}/tools/pack ]; then
+    echo "# "
+    echo "# You should set RAINBOWPI_SDK_DIR environment variable correctly!"
+    echo "# "
+    echo "# See : https://github.com/rainbow-pi/rainbow-pi-sdk for details!"
+    echo "# "
+    exit 1
+fi
+
 export BOARD=tiger-spinand-standard
 
-export TOP_DIR=`pwd`
-
 # buildroot
-export BUILDROOT_DIR=${TOP_DIR}/buildroot/
+export BUILDROOT_DIR=${RAINBOWPI_SDK_DIR}/buildroot/
 # export BUILDROOT_OUTPUT_DIR=${BUILDROOT_DIR}output-rainbow-pi-baseline/
 export BUILDROOT_OUTPUT_DIR=${BUILDROOT_DIR}output-rainbow-pi-qt/
 export BUILDROOT_ROOTFS_FILE=${BUILDROOT_OUTPUT_DIR}images/rootfs.tar.bz2
@@ -30,25 +46,25 @@ export BUILDROOT_ROOTFS_FILE=${BUILDROOT_OUTPUT_DIR}images/rootfs.tar.bz2
 export APP_COMPILER_DIR=${BUILDROOT_OUTPUT_DIR}host/bin/
 
 # config file
-export SDK_CONFIG_DIR=${TOP_DIR}/configs/
+export SDK_CONFIG_DIR=${RAINBOWPI_SDK_DIR}/configs/
 
 # application
-export APP_DIR=${TOP_DIR}/app/
+export APP_DIR=${RAINBOWPI_SDK_DIR}/app/
 
 # u-boot
-export UBOOT_DIR=${TOP_DIR}/u-boot-2011.09/
+export UBOOT_DIR=${RAINBOWPI_SDK_DIR}/u-boot-2011.09/
 
 # linux
-export KERNEL_DIR=${TOP_DIR}/linux-3.4/
-export KERNEL_TOOLCHAINS_DIR=${TOP_DIR}/tools/external-toolchain/bin/
+export KERNEL_DIR=${RAINBOWPI_SDK_DIR}/linux-3.4/
+export KERNEL_TOOLCHAINS_DIR=${RAINBOWPI_SDK_DIR}/tools/external-toolchain/bin/
 export KERNEL_CROSS_COMPILE=${KERNEL_TOOLCHAINS_DIR}arm-linux-gnueabi-
 export UBOOT_CROSS_COMPILE=${KERNEL_CROSS_COMPILE}
 
-export PREBUILT_DIR=${TOP_DIR}/prebuilt/
-export OUTPUT_DIR=${TOP_DIR}/output/
+export PREBUILT_DIR=${RAINBOWPI_SDK_DIR}/prebuilt/
+export OUTPUT_DIR=${RAINBOWPI_SDK_DIR}/output/
 
-export HOSTTOOLS_DIR=${TOP_DIR}/tools/bin/
-export PACKTOOLS_DIR=${TOP_DIR}/tools/pack/
+export HOSTTOOLS_DIR=${RAINBOWPI_SDK_DIR}/tools/bin/
+export PACKTOOLS_DIR=${RAINBOWPI_SDK_DIR}/tools/pack/
 
 export ROOTFS_DIR=${OUTPUT_DIR}rootfs/
 export ROOTFS_OVERRIDE_DIR=${PREBUILT_DIR}rootfs-override/
@@ -84,7 +100,7 @@ function build_buildroot()
 {
     (cd ${BUILDROOT_DIR} && ./build-qt.sh)
     [ $? -ne 0 ] && echo "build buildroot Failed" && return 1
-    cd ${TOP_DIR}
+    cd ${RAINBOWPI_SDK_DIR}
     return 0
 }
 
@@ -267,8 +283,8 @@ elif [ $# -gt 0 ]; then
 	fi
 	
 	(cd ${KERNEL_DIR} && make ARCH=arm menuconfig)
-	[ $? -ne 0 ] && echo "kernel menuconfig Failed" && cd ${TOP_DIR}
-	cd ${TOP_DIR}
+	[ $? -ne 0 ] && echo "kernel menuconfig Failed" && cd ${RAINBOWPI_SDK_DIR}
+	cd ${RAINBOWPI_SDK_DIR}
     fi    
 	
     if [ $1 == 'rootfs' ]; then
